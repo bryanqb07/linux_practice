@@ -4,6 +4,7 @@
 #include <sys/stat.h> // for stat
 #include <string.h> // for strlen, strcpy, strcmp
 #include <dirent.h> //for DIR , struct dirent
+#include <stdbool.h>
 #include <assert.h>
 
 static const size_t kMaxPath = 1024;
@@ -15,7 +16,7 @@ static void listMatches(char path[], size_t length, const char *name){
   while (true){
     struct dirent *de = readdir(dir); // read in a directory
     if (de == NULL) break; // iterated over all directories
-    if (strcmp(de->d_name, ".") == 0 ) || strcmp(de->d_name, ".." == 0) continue; // skip directories named . (current) .. (previous)
+    if (strcmp(de->d_name, ".") == 0  || strcmp(de->d_name, "..") == 0) continue; // skip directories named . (current) .. (previous)
     if (length + strlen(de->d_name) > kMaxPath) continue;
     strcpy(path + length, de->d_name); // copies dir name onto path
     struct stat st;
@@ -35,7 +36,7 @@ int main(int argc, char *argv[]){
   assert(argc == 3);
   const char *directory = argv[1];
   struct stat st;
-  lstat(directory, &st); // populate struct stat with file name
+  lstat(directory, &st); // populate struct stat with directory name
   assert(S_ISDIR(st.st_mode)); // check to see if it's directory
   size_t length = strlen(directory);
   if (length > kMaxPath) return 0; 
