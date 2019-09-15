@@ -6,6 +6,22 @@
 #include <sys/wait.h> // waitpid
 #include <signal.h>
 
+
+static void toggleBLOCKCHLDBlock(int how){
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGCHLD);
+  sigprocmask(how, &mask, NULL);
+}
+
+void blockSIGCHILD(){
+  toggleSIGCHLDblock(SIG_BLOCK);
+}
+
+void unblockSIGCHILD(){
+  toggleSIGCHLDblock(SIG_UNBLOCK);
+}
+
 static pid_t fgpid = 0; // gloabl
 
 static void reapProcesses(int sig){
@@ -18,7 +34,12 @@ static void reapProcesses(int sig){
 
 static void waitForForegroundProcess(pid_t pid){
   fgpid = pid;
-  while (fgpid == pid) { ; }
+  sigset_t empty;
+  sigemptyset(&empty);
+  while (fgpid == pid) {
+    sigsuspend(&empty);
+  }
+  unblockSIGCHLD();
 }
 
 int main(int argc, char *argv[]){
@@ -33,14 +54,17 @@ int main(int argc, char *argv[]){
     bool isbg = strcmp(arguments[count - 1], "&") == 0; 
     // if last argument is &, let child run in background
     if (isbg) arguments[--count] == NULL; //overwrite &
+    blockSIGCHLD();
     pid_t pid = fork();
     if (pid == 0){
+      unblockSIGCHLD();
       execvp(arguments[0], arguments);
       printf("%s: Command not found\n", argv[0]); //error checking
       exit(0);
     }
     if (isbg){ // if background don't wait for child to finish
       printf("%d %s\n", pid, command);
+      unblockSIGCHLD();
     }else{ // don't do anything until child process ends
       waitForForegroundProcess(pid);
     }
