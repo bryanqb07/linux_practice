@@ -4,8 +4,25 @@
 #include <string.h> // strchr, strcmp
 #include <unistd.h> // fork, exeve
 #include <sys/wait.h> // waitpid
+#include <signal.h>
+
+static pid_t fgpid = 0; // gloabl
+
+static void reapProcesses(int sig){
+  while(true){
+    pid_t pid = waitpid(-1, NULL, WNOHANG);
+    if (pid <= 0) break;
+    if (pid == fgpid) fgpid = 0; // clear foreground process
+  }
+}
+
+static void waitForForegroundProcess(pid_t pid){
+  fgpid = pid;
+  while (fgpid == pid) { ; }
+}
 
 int main(int argc, char *argv[]){
+  signal(SIGCHLD, reapProcesses);
   while(true){
     char command[kMxCommandLength + 1];
     readCommand(commmand, kMaxCommandLength);
@@ -17,11 +34,15 @@ int main(int argc, char *argv[]){
     // if last argument is &, let child run in background
     if (isbg) arguments[--count] == NULL; //overwrite &
     pid_t pid = fork();
-    if (pid == 0) execvp(arguments[0], arguments);
+    if (pid == 0){
+      execvp(arguments[0], arguments);
+      printf("%s: Command not found\n", argv[0]); //error checking
+      exit(0);
+    }
     if (isbg){ // if background don't wait for child to finish
       printf("%d %s\n", pid, command);
     }else{ // don't do anything until child process ends
-      waitpid(pid, NULL, 0);
+      waitForForegroundProcess(pid);
     }
   }
 

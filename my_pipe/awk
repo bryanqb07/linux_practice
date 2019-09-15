@@ -1,0 +1,2 @@
+my_pipe2.c:static const int kPipeFailed = 1;
+my_pipe2.c:static const int kForkFailed = 2;

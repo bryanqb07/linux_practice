@@ -3,6 +3,7 @@
 #include <sys/types.h> // fork
 #include <unistd.h> // sleep
 #include <stdlib.h>
+#include <stdbool.h>
 
 static const int kSignalFailed = 1;
 static const int kForkFailed = 2;
@@ -12,8 +13,11 @@ static const size_t kNumChildren = 5;
 static size_t numChildrenDonePlaying = 0;
 
 static void reapChild(int sig){
-  waitpid(-1, NULL, 0); // clean up child after done 
-  numChildrenDonePlaying++;
+  while(true){
+    pid_t pid = waitpid(-1, NULL, 0); // clean up child after done 
+    if (pid < 0) return;
+    numChildrenDonePlaying++;
+  }
 }
 
 int main(int argc, char *argv[]){
